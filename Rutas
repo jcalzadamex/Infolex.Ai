@@ -1,0 +1,60 @@
+from datetime import date
+from pathlib import Path
+import time
+import requests
+from bs4 import BeautifulSoup
+
+BASE_URL = "https://www.dof.gob.mx"
+
+def get_dof_daily_url(fecha: date) -> str:
+    return f"{BASE_URL}/index.php?year={fecha.year}&month={fecha.month}&day={fecha.day}"
+
+def fetch_html(url: str) -> str:
+    resp = requests.get(url, timeout=20)
+    resp.raise_for_status()
+    return resp.text
+
+def parse_daily_page(html: str):
+    soup = BeautifulSoup(html, "lxml")
+    links = []
+    for a in soup.find_all("a"):
+        href = a.get("href", "")
+        if href and "nota_detalle.php" in href:
+            full_url = href if href.startswith("http") else BASE_URL + "/" + href.lstrip("/")
+            links.append(full_url)
+    return list(set(links))
+
+def fetch_publicacion(url: str) -> str:
+    html = fetch_html(url)
+    soup = BeautifulSoup(html, "lxml")
+    texto = soup.get_text(separator="\n", strip=True)
+    return texto
+
+def save_text(content: str, output_path: Path):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+def scrape_dof_day(fecha: date):
+    print(f"[DOF] Descargando publicaciones del {fecha.isoformat()}")
+    daily_url = get_dof_daily_url(fecha)
+    daily_html = fetch_html(daily_url)
+    links = parse_daily_page(daily_html)
+
+    base_dir = Path("data/raw/dof") / fecha.isoformat()
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"[DOF] Encontrados {len(links)} enlaces.")
+    for i, url in enumerate(links, start=1):
+        try:
+            print(f"[DOF] ({i}/{len(links)}) {url}")
+            texto = fetch_publicacion(url)
+            filename = base_dir / f"publicacion_{i:03d}.txt"
+            save_text(texto, filename)
+            time.sleep(1)
+        except Exception as e:
+            print(f"[DOF] Error con {url}: {e}")
+
+if __name__ == "__main__":
+    scrape_dof_day(date.today())
+
