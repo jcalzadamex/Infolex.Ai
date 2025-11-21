@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+beautifulsoup4
+lxml
+chromadb
+pydantic
+python-dotenv
+pytest
