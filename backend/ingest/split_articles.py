@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 ARTICULO_REGEX = re.compile(
-    r"(Artículo\s*[0-9]+[A-Za-zº\.]*)", 
+    r"(Artículo\s*[0-9]+[A-Za-zº\.]*)",
     flags=re.IGNORECASE
 )
 
@@ -21,7 +21,6 @@ def split_into_articles(texto: str) -> list[dict]:
     ]
     """
 
-    # Encuentra todas las coincidencias del patrón
     coincidencias = list(ARTICULO_REGEX.finditer(texto))
 
     if not coincidencias:
@@ -33,10 +32,35 @@ def split_into_articles(texto: str) -> list[dict]:
         titulo = match.group(1)
         inicio = match.start()
 
-        # Fin = inicio del siguiente artículo o fin del documento
         if i + 1 < len(coincidencias):
             fin = coincidencias[i + 1].start()
         else:
             fin = len(texto)
 
         contenido = texto[inicio:fin].strip()
+
+        articulos.append({
+            "articulo": titulo,
+            "contenido": contenido
+        })
+
+    return articulos
+
+
+def process_file(path: Path) -> list[dict]:
+    """
+    Recibe la ruta a un .txt y devuelve la lista de artículos segmentados.
+    """
+    texto = path.read_text(encoding="utf-8", errors="ignore")
+    return split_into_articles(texto)
+
+
+if __name__ == "__main__":
+    test_path = Path("data/raw/dof/ejemplo.txt")
+    if test_path.exists():
+        resultado = process_file(test_path)
+        for art in resultado:
+            print("====", art["articulo"], "====")
+            print(art["contenido"][:200], "...\n")
+    else:
+        print("No existe el archivo data/raw/dof/ejemplo.txt")
