@@ -6,3 +6,5 @@ lxml
 chromadb
 pydantic
 python-dotenv
+pytest
+
